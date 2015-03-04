@@ -1,0 +1,36 @@
+{
+  "name": "bunyan-pub-stream",
+  "version": "0.0.0",
+  "description": "a writable stream publish to bunyan-hub",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "destroy": "^1.0.3",
+    "dnode": "^1.2.0",
+    "tape": "^3.5.0"
+  },
+  "devDependencies": {
+    "tape": "^3.5.0"
+  },
+  "scripts": {
+    "test": "note test/stream.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/undoZen/bunyan-pub-stream.git"
+  },
+  "keywords": [
+    "bunyan",
+    "log",
+    "pubsub",
+    "stream"
+  ],
+  "author": "undoZen <opensource@undozen.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/undoZen/bunyan-pub-stream/issues"
+  },
+  "homepage": "https://github.com/undoZen/bunyan-pub-stream"
+}
