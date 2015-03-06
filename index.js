@@ -63,6 +63,7 @@ function PubStream(opts) {
     if (!(this instanceof PubStream)) return new PubStream(opts);
     Writable.apply(this, arguments);
     psCount += 1;
+    opts = opts || {};
     if (opts.raw) {
         this.objectMode = true;
     }
