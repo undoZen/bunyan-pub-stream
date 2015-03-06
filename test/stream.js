@@ -1,7 +1,6 @@
 'use strict';
 var tape = require('tape');
 var dnode = require('dnode');
-
 tape('bunyan-hub should be running', function (test) {
     test.plan(2);
     var d = dnode();
@@ -15,8 +14,7 @@ tape('bunyan-hub should be running', function (test) {
         });
     });
 });
-
-/*
+return;
 var minValidRecord = {
     v: 0, //TODO: get this from bunyan.LOG_VERSION
     level: 30,
@@ -26,7 +24,9 @@ var minValidRecord = {
     time: Date.now(),
     msg: 'msg'
 };
-var pubStream = require('../');
+
+var pubStream = require('../')({
+    raw: true
+});
 pubStream.write(minValidRecord);
 pubStream.end();
-*/
