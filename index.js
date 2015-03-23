@@ -45,13 +45,14 @@ function connect() {
     socket = net.connect(28692);
     socket.on('connect', onconnect);
     socket.on('error', onerror);
-    socket.on('end', reconnect);
+    socket.on('close', reconnect);
 }
 
 function onconnect(remote) {
     retryCount = 0;
     connecting = false;
     var _end = socket.end;
+    console.log('connected');
     socket.write('{"cmd":"publish"}\n');
     while (recBuffer.length) {
         socket.write(recBuffer.join(''));
@@ -71,6 +72,7 @@ function onerror(err) {
 };
 
 function reconnect() {
+    console.log('recon');
     destroy(socket);
     if (++retryCount > 20) {
         console.error('can not connect to bunyan-hub for 1 minute, abort.');
@@ -78,6 +80,7 @@ function reconnect() {
     }
     console.error('bunyan-pub-stream connection ended');
     console.error('will try reconnecting in 5s');
+    connecting = false;
     setTimeout(connect, 5000);
 }
 
@@ -119,7 +122,7 @@ function endAPubStream() {
 }
 
 function endSocket() {
-    socket.removeListener('end', reconnect);
+    socket.removeListener('close', reconnect);
     if (!recBuffer.length) {
         socket.end();
     } else {
