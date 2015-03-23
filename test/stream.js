@@ -5,6 +5,7 @@ var co = require('co');
 var utils = require('./utils');
 var xtend = require('xtend');
 var spawnSync = require('child_process').spawnSync;
+var PubStream, pubStream, sub;
 
 tape('stop running bunyan-hub if any', function (test) {
     test.plan(1);
@@ -12,37 +13,6 @@ tape('stop running bunyan-hub if any', function (test) {
         'node_modules', '.bin', 'bunyan-hub'), 'stop']);
     test.ok(result.stdout || result.stderr);
 });
-return;
-
-tape('bunyan-hub should be running', function (test) {
-    test.plan(2);
-    var d = dnode();
-    d.connect(28692);
-    d.on('remote', function (remote) {
-        test.equal(typeof remote.version, 'function');
-        remote.version(function (version) {
-            console.log(version);
-            test.ok( !! version);
-            d.end();
-        });
-    });
-});
-return;
-var minValidRecord = {
-    v: 0, //TODO: get this from bunyan.LOG_VERSION
-    level: 30,
-    name: 'name',
-    hostname: 'hostname',
-    pid: 123,
-    time: Date.now(),
-    msg: 'msg'
-};
-
-var pubStream = require('../')({
-    raw: true
-});
-pubStream.write(minValidRecord);
-pubStream.end();
 
 var minValidRecord = {
     v: 0, //TODO: get this from bunyan.LOG_VERSION
@@ -66,85 +36,60 @@ var rec3 = xtend(minValidRecord, {
     level: 20,
     time: time0 + 3000,
 })
+var rec4 = xtend(rec1, {
+    time: time0 + 4000,
+});
+var rec5 = xtend(rec2, {
+    time: time0 + 5000,
+})
+var rec6 = xtend(rec3, {
+    time: time0 + 6000,
+})
 
-tape('publish and subscribe to hub', co.wrap(function * (test) {
-    test.plan(4);
-    yield utils.ready;
-    var socket = yield utils.connect(28692);
-    var sub = yield utils.connect(28692);
-    var sub30 = yield utils.connect(28692);
-    socket.write('{"cmd":"publish"}\n');
+var run;
+tape('publish to local bunyan-hub (raw)', co.wrap(function * (test) {
+    test.plan(3);
+    run = utils.run();
+    yield run.ready;
+    sub = yield utils.connect(28692);
     sub.write('{"cmd":"subscribe"}\n');
-    sub30.write('{"cmd":"subscribe","level":30}\n');
-    sub30.ee.on('record', function (rec) {
-        test.deepEqual(rec, rec1);
-    });
     sub.ee.on('record', function (rec) {
-        test.deepEqual(rec, rec1);
+        test.equal(rec.name, 'name');
     });
-    yield utils.sleep(200);
-    socket.write(JSON.stringify(rec1) + '\n');
-    yield utils.sleep(200);
-    sub.ee.removeAllListeners('record');
-    sub.ee.on('record', function (rec) {
-        test.deepEqual(rec, rec2);
+    yield utils.sleep(100);
+    PubStream = require('../');
+    pubStream = new PubStream({
+        raw: true
     });
-    socket.write(JSON.stringify(rec2) + '\n');
-    yield utils.sleep(200);
-    sub.ee.removeAllListeners('record');
-    sub.ee.on('record', function (rec) {
-        test.deepEqual(rec, rec3);
-    });
-    socket.write(
-        '{"v":0,"level":20,"name":"name","hostname":"hostname",');
-    yield utils.sleep(200);
-    socket.write('"pid":123,"time":' + (time0 + 3000) + ',"msg":"msg"}');
-    sub.end();
-    sub30.end();
-    /*
-    yield utils.sleep(200);
-    socket.write(rec4);
-    socket.write(rec5);
-    socket.write(rec6);
-    socket.write(rec7);
-    */
-    socket.end();
+    pubStream.write(rec1);
+    pubStream.write(rec2);
+    pubStream.write(rec3);
+    console.log(1);
 }));
 
-tape('got history by level', co.wrap(function * (test) {
-    test.plan(6);
-    var sub = yield utils.connect(28692);
-    sub.write('{"cmd":"subscribe","history":true}\n');
-    var records = [];
-    sub.ee.on('record', records.push.bind(records));
-    yield utils.sleep(500);
+tape('publish to local bunyan-hub (json string)', co.wrap(function * (test) {
+    console.log(2);
+    test.plan(3);
+    pubStream.end();
     sub.end();
-    test.equal(records.length, 3);
-    var sub = yield utils.connect(28692);
-    sub.write('{"cmd":"subscribe","history":true,"level":20}\n');
-    var records = [];
-    sub.ee.on('record', records.push.bind(records));
-    yield utils.sleep(500);
-    sub.end();
-    test.equal(records.length, 2);
-    test.deepEqual(records[0], rec1);
-    test.deepEqual(records[1], rec3);
-    var sub = yield utils.connect(28692);
-    sub.write('{"cmd":"subscribe","history":true,"level":20,"time":' +
-        rec2.time + '}\n');
-    var records = [];
-    sub.ee.on('record', records.push.bind(records));
-    yield utils.sleep(500);
-    sub.end();
-    test.equal(records.length, 1);
-    test.deepEqual(records[0], rec3);
+    sub = yield utils.connect(28692);
+    console.log(3);
+    sub.write('{"cmd":"subscribe"}\n');
+    sub.ee.on('record', function (rec) {
+        test.equal(rec.name, 'name');
+    });
+    yield utils.sleep(100);
+    console.log(4);
+    pubStream = new PubStream();
+    pubStream.write(JSON.stringify(rec4));
+    pubStream.write(JSON.stringify(rec5));
+    pubStream.write(JSON.stringify(rec6));
+    console.log(5);
 }));
 
-tape('server could be stopped', co.wrap(function * (test) {
+tape('clean up', co.wrap(function * (test) {
     test.plan(1);
-    yield utils.ready;
-    var socket = yield utils.connect(28692);
-    process.nextTick(socket.end.bind(socket, '{"cmd":"stop"}'));
-    var obj = yield utils.respond(socket);
-    test.ok(obj.stopped);
+    sub.end();
+    pubStream.end();
+    run.stop(test);
 }));

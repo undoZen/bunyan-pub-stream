@@ -1,68 +1,92 @@
 'use strict';
 var net = require('net');
 var util = require('util');
-var dnode = require('dnode');
 var destroy = require('destroy');
 var VERSION = require('./package.json').version;
 var Writable = require('stream').Writable;
 
 var retryCount = 0;
-var remoteLog;
+var socketWrite;
 var recBuffer = [];
 var psCount = 0;
 
+function isValidRecord(rec) {
+    if (!rec ||
+        rec.v == null ||
+        rec.level == null ||
+        rec.name == null ||
+        rec.hostname == null ||
+        rec.pid == null ||
+        rec.time == null ||
+        rec.msg == null) {
+        // Not valid Bunyan log.
+        return false;
+    } else {
+        return true;
+    }
+}
+
 function log(rec) {
-    if (remoteLog) {
-        remoteLog(rec);
+    if (!isValidRecord(rec)) return;
+    var json = JSON.stringify(rec) + '\n';
+    if (socketWrite) {
+        socketWrite(json);
         return true;
     } else {
-        recBuffer.push(rec);
+        recBuffer.push(json);
         return false;
     }
 }
-var d = dnode();
-d.on('remote', onremote);
+var socket, connecting;
 
-function onremote(remote) {
+function connect() {
+    if (connecting) return;
+    connecting = true;
+    socket = net.connect(28692);
+    socket.on('connect', onconnect);
+    socket.on('error', onerror);
+    socket.on('end', reconnect);
+}
+
+function onconnect(remote) {
     retryCount = 0;
+    connecting = false;
+    var _end = socket.end;
+    socket.write('{"cmd":"publish"}\n');
     while (recBuffer.length) {
-        remote.log(recBuffer.shift());
+        console.log(recBuffer);
+        socket.write(recBuffer.join(''));
+        recBuffer = [];
     }
-    d.emit('bufferFlushed');
-    remoteLog = remote.log.bind(remote);
+    socketWrite = socket.write.bind(socket);
+    socket.end = function () {
+        socketWrite = null;
+        return _end.apply(this, arguments);
+    }
+    socket.emit('bufferFlushed');
 };
-d.on('error', onerror);
 
 function onerror(err) {
-    remoteLog = null;
     console.error('bunyan-pub-stream connection error:', err);
-    d.end();
+    socket.end();
 };
-d.on('end', reconnect);
 
 function reconnect() {
-    remoteLog = null;
-    destroy(d);
+    destroy(socket);
     if (++retryCount > 20) {
         console.error('can not connect to bunyan-hub for 1 minute, abort.');
         process.exit(1);
     }
     console.error('bunyan-pub-stream connection ended');
     console.error('will try reconnecting in 5s');
-    setTimeout(function () {
-        d = dnode();
-        d.on('remote', onremote);
-        d.on('error', onerror);
-        d.on('end', reconnect);
-        d.connect(28692);
-    }, 5000);
+    setTimeout(connect, 5000);
 }
-d.connect(28692);
 
 function PubStream(opts) {
     if (!(this instanceof PubStream)) return new PubStream(opts);
     Writable.apply(this, arguments);
-    psCount += 1;
+    if (!socketWrite) connect();
+    psCount++;
     opts = opts || {};
     if (opts.raw) {
         this.objectMode = true;
@@ -72,7 +96,19 @@ function PubStream(opts) {
 util.inherits(PubStream, Writable);
 
 PubStream.prototype.write = function (chunk, encoding) {
-    return log(this.objectMode ? chunk : chunk.toString('utf-8'));
+    console.log(chunk);
+    var obj;
+    if (this.objectMode) {
+        obj = chunk;
+    } else {
+        try {
+            obj = JSON.parse(chunk.toString('utf-8'));
+        } catch (e) {
+            return false;
+        }
+    }
+    console.log(obj);
+    return log(obj);
 };
 PubStream.prototype.end = function () {
     Writable.prototype.end.apply(this, arguments);
@@ -81,16 +117,16 @@ PubStream.prototype.end = function () {
 
 function endAPubStream() {
     if (!--psCount) {
-        endD();
+        endSocket();
     }
 }
 
-function endD() {
-    d.removeListener('end', reconnect);
+function endSocket() {
+    socket.removeListener('end', reconnect);
     if (!recBuffer.length) {
-        d.end();
+        socket.end();
     } else {
-        d.on('bufferFlushed', d.end.bind(d));
+        socket.on('bufferFlushed', socket.end.bind(socket));
     }
 }
 module.exports = PubStream;

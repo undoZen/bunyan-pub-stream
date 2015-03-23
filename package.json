@@ -17,7 +17,7 @@
     "xtend": "^4.0.0"
   },
   "scripts": {
-    "test": "note test/stream.js"
+    "test": "prove --exec node test/*.js"
   },
   "repository": {
     "type": "git",
