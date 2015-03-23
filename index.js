@@ -54,7 +54,6 @@ function onconnect(remote) {
     var _end = socket.end;
     socket.write('{"cmd":"publish"}\n');
     while (recBuffer.length) {
-        console.log(recBuffer);
         socket.write(recBuffer.join(''));
         recBuffer = [];
     }
@@ -96,7 +95,6 @@ function PubStream(opts) {
 util.inherits(PubStream, Writable);
 
 PubStream.prototype.write = function (chunk, encoding) {
-    console.log(chunk);
     var obj;
     if (this.objectMode) {
         obj = chunk;
@@ -107,7 +105,6 @@ PubStream.prototype.write = function (chunk, encoding) {
             return false;
         }
     }
-    console.log(obj);
     return log(obj);
 };
 PubStream.prototype.end = function () {
