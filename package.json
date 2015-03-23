@@ -7,12 +7,14 @@
     "test": "test"
   },
   "dependencies": {
-    "destroy": "^1.0.3",
-    "dnode": "^1.2.0",
-    "tape": "^3.5.0"
+    "destroy": "^1.0.3"
   },
   "devDependencies": {
-    "tape": "^3.5.0"
+    "bunyan-hub": "^1.0.0-rc2",
+    "co": "^4.5.1",
+    "eventemitter3": "^0.1.6",
+    "tape": "^3.5.0",
+    "xtend": "^4.0.0"
   },
   "scripts": {
     "test": "note test/stream.js"
