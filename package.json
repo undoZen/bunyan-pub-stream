@@ -3,15 +3,14 @@
   "version": "1.0.0",
   "description": "a writable stream publish to bunyan-hub",
   "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
+  "files": [
+    "index.js"
+  ],
   "dependencies": {
-    "bunyan-hub": "^1.0.0-rc4",
     "destroy": "^1.0.3"
   },
   "devDependencies": {
-    "bunyan-hub": "^1.0.0-rc2",
+    "bunyan-hub": "^1.0.0",
     "co": "^4.5.1",
     "eventemitter3": "^0.1.6",
     "tape": "^3.5.0",
