@@ -1,6 +1,6 @@
 {
   "name": "bunyan-pub-stream",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "a writable stream publish to bunyan-hub",
   "main": "index.js",
   "files": [
