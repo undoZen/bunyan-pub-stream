@@ -1,5 +1,6 @@
 'use strict';
 var net = require('net');
+var exec = require('child_process').exec;
 var util = require('util');
 var destroy = require('destroy');
 var VERSION = require('./package.json').version;
@@ -79,7 +80,16 @@ function reconnect() {
         process.exit(1);
     }
     process.stderr.write('bunyan-pub-stream connection ended\n');
-    process.stderr.write('will try reconnecting in 5s\n');
+    process.stderr.write('will try to spawn bunyan-hub and reconnect in 5s\n');
+    exec('bunyanhub start', function (error, stdout, stderr) {
+        console.log('exec `bunyanhub start` result:');
+        console.log('stdout: ' + stdout);
+        console.log('stderr: ' + stderr);
+        if (error && error.stack) {
+          console.log('error:');
+          console.log(error.stack);
+        }
+    });
     connecting = false;
     setTimeout(connect, 5000);
 }
