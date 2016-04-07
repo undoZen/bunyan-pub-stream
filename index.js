@@ -1,6 +1,6 @@
 'use strict';
 var net = require('net');
-var exec = require('child_process').exec;
+var fork = require('child_process').fork;
 var util = require('util');
 var destroy = require('destroy');
 var VERSION = require('./package.json').version;
@@ -81,8 +81,9 @@ function reconnect() {
     }
     process.stderr.write('bunyan-pub-stream connection ended\n');
     process.stderr.write('will try to spawn bunyan-hub and reconnect in 5s\n');
-    exec('bunyanhub start', function (error, stdout, stderr) {
-        console.log('exec `bunyanhub start` result:');
+    var bunyanHubPath = require.resolve('bunyan-hub/cmd.js');
+    fork(bunyanHubPath, ['start'], function (error, stdout, stderr) {
+        console.log('fork bunyan-hub result:');
         console.log('stdout: ' + stdout);
         console.log('stderr: ' + stderr);
         if (error && error.stack) {
